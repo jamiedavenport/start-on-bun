@@ -8,6 +8,7 @@
 	"files": {
 		"ignoreUnknown": false,
 		"includes": [
+			"server.ts",
 			"**/src/**/*",
 			"**/.vscode/**/*",
 			"**/index.html",
