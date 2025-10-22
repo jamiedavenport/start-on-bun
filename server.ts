@@ -22,9 +22,14 @@ async function getStaticRoutes(): Promise<Record<string, () => Response>> {
 	const routes = Object.fromEntries(
 		paths.map((path) => {
 			const file = Bun.file(path);
+
+            const isBundledAsset = path.includes("assets");
+            // Cache bundled assets for a year, cache other assets for an hour
+            const cacheControl = isBundledAsset ? "max-age=31536000" : "max-age=3600";
+
 			return [
 				path.replace(CONSTANTS.CLIENT_PATH, ""),
-				() => new Response(file, { headers: { "Content-Type": file.type } }),
+				() => new Response(file, { headers: { "Content-Type": file.type, "Cache-Control": cacheControl } }),
 			];
 		}),
 	) as Record<string, () => Response>;
