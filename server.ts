@@ -19,7 +19,7 @@ async function getStaticRoutes(): Promise<Record<string, () => Response>> {
 	const paths = await Array.fromAsync(
 		new Glob(`${CONSTANTS.CLIENT_PATH}/**/*`).scan("."),
 	);
-	return Object.fromEntries(
+	const routes = Object.fromEntries(
 		paths.map((path) => {
 			const file = Bun.file(path);
 			return [
@@ -27,7 +27,12 @@ async function getStaticRoutes(): Promise<Record<string, () => Response>> {
 				() => new Response(file, { headers: { "Content-Type": file.type } }),
 			];
 		}),
-	) as Record<string, () => Response>;} catch(error) {
+	) as Record<string, () => Response>;
+
+    console.info(`🪴 Found ${Object.keys(routes).length} static assets`);
+
+    return routes;
+} catch(error) {
         console.error("🔥 Error scanning for static assets:", error);
         return {};
     }
