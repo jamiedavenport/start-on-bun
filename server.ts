@@ -38,8 +38,8 @@ async function getStaticRoutes(): Promise<Record<string, () => Response>> {
     }
 }
 
-console.info("🪴 Starting server on port ", process.env.PORT ?? 3000);
-Bun.serve({
+
+const server = Bun.serve({
 	port: process.env.PORT ?? 3000,
 	routes: {
 		...(await getStaticRoutes()),
@@ -48,3 +48,5 @@ Bun.serve({
 		},
 	},
 });
+
+console.info(`🪴 Server running at ${server.hostname}:${server.port}`);
