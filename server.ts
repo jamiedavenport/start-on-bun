@@ -11,7 +11,10 @@ type ServerModule = {
 	};
 };
 
+const serverModule = (await import(CONSTANTS.SERVER_PATH)) as ServerModule;
+
 async function getStaticRoutes(): Promise<Record<string, () => Response>> {
+    console.info("🪴 Scanning for static assets...")
 	const paths = await Array.fromAsync(
 		new Glob(`${CONSTANTS.CLIENT_PATH}/**/*`).scan("."),
 	);
@@ -26,13 +29,12 @@ async function getStaticRoutes(): Promise<Record<string, () => Response>> {
 	) as Record<string, () => Response>;
 }
 
+console.info("🪴 Starting server on port ", process.env.PORT ?? 3000);
 Bun.serve({
 	port: process.env.PORT ?? 3000,
 	routes: {
 		...(await getStaticRoutes()),
 		"/*": async (req) => {
-            const serverModule = (await import(CONSTANTS.SERVER_PATH)) as ServerModule;
-            
 			return serverModule.default.fetch(req);
 		},
 	},
