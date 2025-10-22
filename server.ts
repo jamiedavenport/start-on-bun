@@ -1,37 +1,36 @@
 import { Glob } from 'bun';
-import {default as handler} from './dist/server/server.js';
 
-const CLIENT_PATH = "./dist/client";
-
-function getStaticAssetPaths() {
-    const glob = new Glob(`${CLIENT_PATH}/**/*`);
-
-    return Array.fromAsync(glob.scan("."));
+const CONSTANTS = {
+    SERVER_PATH: "./dist/server/server.js",
+    CLIENT_PATH: "./dist/client",
 }
 
-async function getStaticRoutes() {
-    const paths = await getStaticAssetPaths();
-
-    const routes: Record<string, () => Response> = {};
-
-    for (const path of paths) {
-        const file = Bun.file(path);
-        const routePath = path.replace(CLIENT_PATH, "");
-        routes[routePath] = () => new Response(file, {
-            headers: {
-                "Content-Type": file.type,
-            }
-        });
+type ServerModule = {
+    default: {
+        fetch: (req: Request) => Promise<Response>;
     }
+}
 
-    return routes;
+const serverModule = await import(CONSTANTS.SERVER_PATH) as ServerModule;
+
+async function getStaticRoutes(): Promise<Record<string, () => Response>> {
+    const paths = await Array.fromAsync(new Glob(`${CONSTANTS.CLIENT_PATH}/**/*`).scan("."));
+    return Object.fromEntries(
+        paths.map((path) => {
+            const file = Bun.file(path);
+            return [
+                path.replace(CONSTANTS.CLIENT_PATH, ""),
+                () => new Response(file, { headers: { "Content-Type": file.type } })
+            ];
+        })
+    ) as Record<string, () => Response>;
 }
 
 Bun.serve({
-    port: 3000,
+    port: process.env.PORT ?? 3000,
     routes:{
         ...(await getStaticRoutes()),
     "/*": async (req) => {
-        return handler.fetch(req);
+        return serverModule.default.fetch(req);
     }}
 })
