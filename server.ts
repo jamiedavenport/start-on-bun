@@ -14,6 +14,7 @@ type ServerModule = {
 const serverModule = (await import(CONSTANTS.SERVER_PATH)) as ServerModule;
 
 async function getStaticRoutes(): Promise<Record<string, () => Response>> {
+    try {
     console.info("🪴 Scanning for static assets...")
 	const paths = await Array.fromAsync(
 		new Glob(`${CONSTANTS.CLIENT_PATH}/**/*`).scan("."),
@@ -26,7 +27,10 @@ async function getStaticRoutes(): Promise<Record<string, () => Response>> {
 				() => new Response(file, { headers: { "Content-Type": file.type } }),
 			];
 		}),
-	) as Record<string, () => Response>;
+	) as Record<string, () => Response>;} catch(error) {
+        console.error("🔥 Error scanning for static assets:", error);
+        return {};
+    }
 }
 
 console.info("🪴 Starting server on port ", process.env.PORT ?? 3000);
