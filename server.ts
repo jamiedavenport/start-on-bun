@@ -13,7 +13,7 @@ type ServerModule = {
 
 const serverModule = (await import(CONSTANTS.SERVER_PATH)) as ServerModule;
 
-async function getStaticRoutes(): Promise<Record<string, () => Response>> {
+async function getStaticRoutes(): Promise<Record<string, (request: Request) => Response | Promise<Response>>> {
     try {
     console.info("🪴 Scanning for static assets...")
 	const paths = await Array.fromAsync(
@@ -30,8 +30,11 @@ async function getStaticRoutes(): Promise<Record<string, () => Response>> {
 			return [
 				path.replace(CONSTANTS.CLIENT_PATH, ""),
 				async (request) => {
-                    if (request.headers.get("Accept-Encoding")?.includes("gzip")) {
-                        console.log("🪴 Encoding");
+                    const acceptsGzip = request.headers.get("Accept-Encoding")?.includes("gzip");
+                    const fileSize = file.size;
+
+                    if (acceptsGzip && fileSize > 5120) { // 5kb = 5120 bytes
+                        console.log("🪴 Encoding (file size: " + fileSize + " bytes)");
                         const buffer = await file.arrayBuffer();
                         const encoded = Bun.gzipSync(buffer);
 
