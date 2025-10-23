@@ -1,4 +1,5 @@
 import { Glob } from "bun";
+import { brotliCompressSync } from "node:zlib";
 
 const CONSTANTS = {
 	SERVER_PATH: "./dist/server/server.js",
@@ -30,18 +31,26 @@ async function getStaticRoutes(): Promise<Record<string, (request: Request) => R
 			return [
 				path.replace(CONSTANTS.CLIENT_PATH, ""),
 				async (request) => {
-                    const acceptsGzip = request.headers.get("Accept-Encoding")?.includes("gzip");
+                    const acceptEncoding = request.headers.get("Accept-Encoding") || "";
+                    const acceptsBrotli = acceptEncoding.includes("br");
+                    const acceptsGzip = acceptEncoding.includes("gzip");
                     const fileSize = file.size;
 
-                    if (acceptsGzip && fileSize > 5120) { // 5kb = 5120 bytes
-                        console.log("🪴 Encoding (file size: " + fileSize + " bytes)");
+                    if (fileSize > 5120) { // 5kb = 5120 bytes
                         const buffer = await file.arrayBuffer();
-                        const encoded = Bun.gzipSync(buffer);
 
-                        return new Response(encoded, { headers: { "Content-Type": file.type, "Cache-Control": cacheControl, "Content-Encoding": "gzip", "Content-Length": buffer.byteLength.toString() } })
+                        if (acceptsBrotli) {
+                            console.log("🪴 Brotli encoding (file size: " + fileSize + " bytes)");
+                            const encoded = brotliCompressSync(buffer);
+                            return new Response(encoded, { headers: { "Content-Type": file.type, "Cache-Control": cacheControl, "Content-Encoding": "br", "Content-Length": buffer.byteLength.toString() } });
+                        } else if (acceptsGzip) {
+                            console.log("🪴 Gzip encoding (file size: " + fileSize + " bytes)");
+                            const encoded = Bun.gzipSync(buffer);
+                            return new Response(encoded, { headers: { "Content-Type": file.type, "Cache-Control": cacheControl, "Content-Encoding": "gzip", "Content-Length": buffer.byteLength.toString() } });
+                        }
                     }
 
-                    return new Response(file, { headers: { "Content-Type": file.type, "Cache-Control": cacheControl } })
+                    return new Response(file, { headers: { "Content-Type": file.type, "Cache-Control": cacheControl } });
                 },
 			];
 		}),
