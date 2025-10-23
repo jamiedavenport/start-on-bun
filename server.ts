@@ -29,10 +29,20 @@ async function getStaticRoutes(): Promise<Record<string, () => Response>> {
 
 			return [
 				path.replace(CONSTANTS.CLIENT_PATH, ""),
-				() => new Response(file, { headers: { "Content-Type": file.type, "Cache-Control": cacheControl } }),
+				async (request) => {
+                    if (request.headers.get("Accept-Encoding")?.includes("gzip")) {
+                        console.log("🪴 Encoding");
+                        const buffer = await file.arrayBuffer();
+                        const encoded = Bun.gzipSync(buffer);
+
+                        return new Response(encoded, { headers: { "Content-Type": file.type, "Cache-Control": cacheControl, "Content-Encoding": "gzip", "Content-Length": buffer.byteLength.toString() } })
+                    }
+
+                    return new Response(file, { headers: { "Content-Type": file.type, "Cache-Control": cacheControl } })
+                },
 			];
 		}),
-	) as Record<string, () => Response>;
+	) as Record<string, (request: Request) => Response | Promise<Response>>;
 
     console.info(`🪴 Found ${Object.keys(routes).length} static assets`);
 
